@@ -350,6 +350,22 @@ def validate_windows_dependencies(sdk_path):
             # Catch any other unexpected errors
             pass
 
+def warn_if_sdk_env_mismatch(tornadovm_home, tornado_sdk):
+    """Warn when TORNADOVM_HOME and the deprecated TORNADO_SDK resolve to different SDKs.
+
+    TORNADOVM_HOME wins silently otherwise, and with SDKMAN it is always set, so a user who
+    points TORNADO_SDK at another SDK runs the SDKMAN one and only sees a confusing missing-module
+    error. Paths are compared after resolving symlinks, so SDKMAN's 'current' link pointing at the
+    same SDK as TORNADO_SDK does not warn.
+    """
+    if not tornado_sdk:
+        return
+    home = os.path.normcase(os.path.realpath(tornadovm_home))
+    sdk = os.path.normcase(os.path.realpath(tornado_sdk))
+    if home != sdk:
+        print(f"[WARNING] TORNADOVM_HOME ({tornadovm_home}) and TORNADO_SDK ({tornado_sdk}) differ; using TORNADOVM_HOME.")
+        print("          Unset TORNADO_SDK, or point TORNADOVM_HOME at the SDK you want to run.")
+
 # ########################################################
 # TornadoVM Runner Tool
 # ########################################################
@@ -359,6 +375,7 @@ class TornadoVMRunnerTool():
         # Use TORNADOVM_HOME (SDKMAN compliant)
         if "TORNADOVM_HOME" in os.environ:
             self.sdk = os.environ["TORNADOVM_HOME"]
+            warn_if_sdk_env_mismatch(self.sdk, os.environ.get("TORNADO_SDK"))
         elif "TORNADO_SDK" in os.environ:
             print("[WARNING] TORNADO_SDK is deprecated, please use TORNADOVM_HOME instead")
             self.sdk = os.environ["TORNADO_SDK"]
